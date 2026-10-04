@@ -31,6 +31,14 @@ git clone https://github.com/unitcraft/opencode-windows-env D:/Sources/opencode-
 "plugins": ["D:/Sources/opencode-windows-env"]
 ```
 
+## Related
+
+Other OpenCode plugins of the same set (they work independently; together they are tested on one machine):
+
+- [opencode-peers](https://github.com/unitcraft/opencode-peers) — letters between OpenCode windows, addressed by `project.role`
+- [opencode-claude-guards](https://github.com/unitcraft/opencode-claude-guards) — the repository's Claude Code rules (hooks, permissions) in OpenCode windows
+- [opencode-claude-code-provider](https://github.com/unitcraft/opencode-claude-code-provider) — OpenCode provider `claude-code` on top of the official Claude Code (private for now)
+
 ## Test
 
 ```sh
@@ -38,3 +46,5 @@ npm test   # node >= 24
 ```
 
 History: moved with its commits from `nv-lang/nova-opencode-plugins` (`plugins/nova-env`).
+
+License: MIT OR Apache-2.0 (see [LICENSE](LICENSE)).
