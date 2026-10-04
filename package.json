@@ -1,11 +1,17 @@
 {
-    "name":  "nova-env",
-    "version":  "0.1.0",
-    "private":  true,
-    "type":  "module",
-    "description":  "Command environment for every OpenCode shell (Git Bash, UTF-8, Temp on the work drive) and the machine time in every model request",
-    "license":  "MIT OR Apache-2.0",
-    "exports":  {
-                    ".":  "./index.ts"
-                }
+  "name": "opencode-windows-env",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Command environment for every OpenCode shell (Git Bash, UTF-8, Temp on the work drive) and the machine time in every model request",
+  "license": "MIT OR Apache-2.0",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unitcraft/opencode-windows-env.git"
+  },
+  "scripts": {
+    "test": "node test/stamp.test.mjs"
+  }
 }
