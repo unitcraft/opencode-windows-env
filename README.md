@@ -37,7 +37,7 @@ Other OpenCode plugins of the same set (they work independently; together they a
 
 - [opencode-peers](https://github.com/unitcraft/opencode-peers) — letters between OpenCode windows, addressed by `project.role`
 - [opencode-claude-guards](https://github.com/unitcraft/opencode-claude-guards) — the repository's Claude Code rules (hooks, permissions) in OpenCode windows
-- [opencode-claude-code-provider](https://github.com/unitcraft/opencode-claude-code-provider) — OpenCode provider `claude-code` on top of the official Claude Code (private for now)
+- [opencode-claude-code-provider](https://github.com/unitcraft/opencode-claude-code-provider) — OpenCode provider `claude-code` on top of the official Claude Code
 
 ## Test
 
