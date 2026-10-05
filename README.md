@@ -19,6 +19,10 @@ calls that only ask the clock (`date "+%H:%M"`, `Get-Date -Format HH:mm`). The s
 adds is constant: a clock in the hint would change every minute and, sitting before the whole
 history, re-bill it on every request with Claude's prefix prompt cache.
 
+Tabs on the [`claude-code` provider](https://github.com/unitcraft/opencode-claude-code-provider) are not
+reached: Claude Code runs its own shell tools and model calls. There the provider stamps the time itself
+(its setting `timeStamp`).
+
 ## Install
 
 ```sh
@@ -35,7 +39,7 @@ git clone https://github.com/unitcraft/opencode-windows-env D:/Sources/opencode-
 
 Other OpenCode plugins of the same set (they work independently; together they are tested on one machine):
 
-- [opencode-peers](https://github.com/unitcraft/opencode-peers) — letters between OpenCode windows, addressed by `project.role`
+- [opencode-peers](https://github.com/unitcraft/opencode-peers) — letters and tasks between OpenCode tabs, addressed by `project.role`
 - [opencode-claude-guards](https://github.com/unitcraft/opencode-claude-guards) — the repository's Claude Code rules (hooks, permissions) in OpenCode windows
 - [opencode-claude-code-provider](https://github.com/unitcraft/opencode-claude-code-provider) — OpenCode provider `claude-code` on top of the official Claude Code
 
