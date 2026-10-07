@@ -39,7 +39,7 @@ import { appendFileSync, existsSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 
-const LOG = path.join(os.tmpdir(), "nova-opencode-plugins.log")
+const LOG = path.join(os.tmpdir(), "opencode-plugins.log")
 const log = (line: string) => {
   try {
     appendFileSync(LOG, `${new Date().toISOString()} nova-env ${line}\n`)

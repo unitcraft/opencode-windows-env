@@ -26,13 +26,13 @@ reached: Claude Code runs its own shell tools and model calls. There the provide
 ## Install
 
 ```sh
-git clone https://github.com/unitcraft/opencode-windows-env D:/Sources/opencode-windows-env
+git clone https://github.com/unitcraft/opencode-windows-env C:/work/opencode-windows-env
 ```
 
 `~/.config/opencode/opencode.jsonc`:
 
 ```jsonc
-"plugins": ["D:/Sources/opencode-windows-env"]
+"plugins": ["C:/work/opencode-windows-env"]
 ```
 
 ## Related
@@ -49,6 +49,6 @@ Other OpenCode plugins of the same set (they work independently; together they a
 npm test   # node >= 24
 ```
 
-History: moved with its commits from `nv-lang/nova-opencode-plugins` (`plugins/nova-env`).
+History: moved with its commits from a private plugins repository of the nova project (`plugins/nova-env`).
 
 License: MIT OR Apache-2.0 (see [LICENSE](LICENSE)).
