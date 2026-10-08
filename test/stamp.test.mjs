@@ -3,7 +3,7 @@
 // Feeds three SSE protocols through stampStream and checks: exactly one HH:MM per text
 // block, at its start; reasoning/tool deltas and non-JSON lines untouched; a stream split
 // in the middle of a line still stamps once. Exit 1 on any failed cell.
-import { stampStream, isTimeOnlyCall } from "../index.ts"
+import { stampStream, isTimeOnlyCall, stripStamps } from "../index.ts"
 
 const enc = new TextEncoder()
 const STAMP = /^\d\d:\d\d\n\n/
@@ -79,6 +79,27 @@ function cell(name, ok, detail) {
   cell("chat: first text chunk stamped once", STAMP.test(r[2].choices[0].delta.content) && r[3].choices[0].delta.content === " дальше", JSON.stringify([r[2], r[3]]))
   const only = await run([chunk("\n")])
   cell("chat: block of whitespace only gets no stamp", only[0].choices[0].delta.content === "\n", JSON.stringify(only))
+}
+
+// History: leading stamps of assistant messages are cut before the request goes to the model; nothing else changes.
+{
+  const body = JSON.stringify({ model: "k3", messages: [
+    { role: "system", content: "02:31\n\nsystem keeps" },
+    { role: "user", content: "02:31\n\nuser keeps" },
+    { role: "assistant", content: "02:38\n\n02:31\n\n02:31\n\nОтвет" },
+    { role: "assistant", content: [{ type: "text", text: "02:30\n\nчасти" }, { type: "tool_use", name: "x" }] },
+    { role: "assistant", content: "02:31\n\n" },
+    { role: "assistant", content: "Без штампа 12:30 внутри" },
+  ] })
+  const o = JSON.parse(stripStamps(body)).messages
+  cell("strip: assistant string cleaned", o[2].content === "Ответ", JSON.stringify(o[2]))
+  cell("strip: assistant parts cleaned", o[3].content[0].text === "части" && o[3].content[1].name === "x", JSON.stringify(o[3]))
+  cell("strip: system and user untouched", o[0].content.startsWith("02:31") && o[1].content.startsWith("02:31"), JSON.stringify([o[0], o[1]]))
+  cell("strip: stamp-only message kept", o[4].content === "02:31\n\n", JSON.stringify(o[4]))
+  cell("strip: stamp inside text kept", o[5].content === "Без штампа 12:30 внутри", JSON.stringify(o[5]))
+  cell("strip: nothing to change returns same body", stripStamps('{"messages":[]}') === '{"messages":[]}' && stripStamps("not json") === "not json", "changed")
+  const resp = JSON.parse(stripStamps(JSON.stringify({ input: [{ role: "assistant", content: [{ type: "output_text", text: "02:31\n\nответ" }] }] })))
+  cell("strip: responses input cleaned", resp.input[0].content[0].text === "ответ", JSON.stringify(resp))
 }
 
 // Garbage passes through unchanged.

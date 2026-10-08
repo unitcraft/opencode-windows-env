@@ -135,6 +135,52 @@ export function isTimeOnlyCall(command: string): boolean {
     .some((s) => TIME_ONLY.some((re) => re.test(s)))
 }
 
+
+// ШТАМПЫ В ИСТОРИИ. Плагин ставит HH:MM в начало ответа, и штамп остаётся в истории сессии. Модели слабее (Kimi K3 на низком усилии)
+// копируют его сами: в начале ответа копится стопка «02:31 02:31 …» со старыми временами (2026-10-09, замер владельца). Перед
+// отправкой запроса модели штампы в начале текстов ответов ассистента вырезаются: модель их не видит и не подражает, а свой
+// штамп плагин ставит по-прежнему на выходе. Вырезание детерминировано, поэтому кэш префикса запроса не ломается.
+const LEAD_STAMPS = /^(?:\s*\d{2}:\d{2})+\s*/
+const stripLead = (t: any): any => {
+  if (typeof t !== "string") return t
+  const out = t.replace(LEAD_STAMPS, "")
+  return out === "" ? t : out // сообщение из одних штампов не опустошаем: пустой ответ API не принимают
+}
+// Тело запроса (JSON) -> тело без штампов у ответов ассистента; не JSON или нечего менять — исходная строка.
+export function stripStamps(body: string): string {
+  let obj: any
+  try {
+    obj = JSON.parse(body)
+  } catch {
+    return body
+  }
+  let changed = false
+  const fixContent = (m: any) => {
+    if (typeof m?.content === "string") {
+      const n = stripLead(m.content)
+      if (n !== m.content) {
+        m.content = n
+        changed = true
+      }
+    } else if (Array.isArray(m?.content)) {
+      for (const part of m.content) {
+        if (part && (part.type === "text" || part.type === "output_text") && typeof part.text === "string") {
+          const n = stripLead(part.text)
+          if (n !== part.text) {
+            part.text = n
+            changed = true
+          }
+        }
+      }
+    }
+  }
+  for (const key of ["messages", "input"]) {
+    if (!Array.isArray(obj?.[key])) continue
+    for (const m of obj[key]) if (m?.role === "assistant") fixContent(m)
+  }
+  return changed ? JSON.stringify(obj) : body
+}
+
 // Экспорт — для самотеста `test/stamp.test.mjs`; OpenCode читает только default.
 export function stampStream(body: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
   const dec = new TextDecoder()
@@ -231,6 +277,30 @@ export default {
         log(`time deny failed: ${e}`)
       }
     })
+
+
+    // Запрос модели: вырезать штампы времени из истории (см. stripStamps). Форма события не документирована: берём ev.request
+    // (Request), чужое и непонятное пропускаем без изменений; сбой не ломает запрос.
+    try {
+      await ctx.session.hook("http.request", async (ev: any) => {
+        try {
+          const req = ev?.request
+          if (!(req instanceof Request) || req.method !== "POST") return
+          if (!/json/i.test(req.headers.get("content-type") ?? "")) return
+          const text = await req.clone().text()
+          const out = stripStamps(text)
+          if (out === text) return
+          const headers = new Headers(req.headers)
+          headers.delete("content-length")
+          ev.request = new Request(req.url, { method: req.method, headers, body: out, signal: req.signal })
+          log(`strip stamps: ${text.length - out.length} chars removed from the request history`)
+        } catch (e) {
+          log(`strip stamps failed: ${e}`)
+        }
+      })
+    } catch (e) {
+      log(`http.request hook not available: ${e}`)
+    }
 
     await ctx.session.hook("http.response", (ev: any) => {
       try {
