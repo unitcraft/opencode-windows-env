@@ -71,6 +71,16 @@ function cell(name, ok, detail) {
   cell("responses: reasoning untouched", r[2].delta === "think", r[2].delta)
 }
 
+// Whitespace-only first chunks (Kimi sends an empty block before a tool call) get no stamp; the first chunk with text does.
+{
+  const chunk = (c) => ev({ choices: [{ index: 0, delta: { content: c } }] })
+  const r = await run([chunk("\n"), chunk("  "), chunk("Готово"), chunk(" дальше")])
+  cell("chat: whitespace chunks not stamped", r[0].choices[0].delta.content === "\n" && r[1].choices[0].delta.content === "  ", JSON.stringify([r[0], r[1]]))
+  cell("chat: first text chunk stamped once", STAMP.test(r[2].choices[0].delta.content) && r[3].choices[0].delta.content === " дальше", JSON.stringify([r[2], r[3]]))
+  const only = await run([chunk("\n")])
+  cell("chat: block of whitespace only gets no stamp", only[0].choices[0].delta.content === "\n", JSON.stringify(only))
+}
+
 // Garbage passes through unchanged.
 {
   const raw = "event: ping\ndata: not json\n\n"

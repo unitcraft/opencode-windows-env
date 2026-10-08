@@ -79,14 +79,15 @@ function hhmm(): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
 }
 
-// Штамп в первый кусок каждого текстового блока одного ответа. Возвращает
+// Штамп в первый кусок каждого текстового блока одного ответа. Кусок из одних пробелов и переводов строки штампа не получает
+// (2026-10-09: Kimi перед вызовом инструмента шлёт пустой блок, и в сессии копились одинокие «01:56 01:56 …»): штамп встанет на первый кусок с текстом. Возвращает
 // изменённую JSON-строку или undefined, если менять нечего.
 function stampEvent(obj: any, seen: Set<string>): boolean {
   const stamp = `${hhmm()}\n\n`
   // Anthropic Messages
   if (obj?.type === "content_block_delta" && obj.delta?.type === "text_delta" && typeof obj.delta.text === "string") {
     const key = `a${obj.index ?? 0}`
-    if (seen.has(key) || obj.delta.text === "") return false
+    if (seen.has(key) || obj.delta.text.trim() === "") return false
     seen.add(key)
     obj.delta.text = stamp + obj.delta.text
     return true
@@ -94,7 +95,7 @@ function stampEvent(obj: any, seen: Set<string>): boolean {
   // OpenAI Responses
   if (obj?.type === "response.output_text.delta" && typeof obj.delta === "string") {
     const key = `r${obj.item_id ?? ""}:${obj.content_index ?? 0}`
-    if (seen.has(key) || obj.delta === "") return false
+    if (seen.has(key) || obj.delta.trim() === "") return false
     seen.add(key)
     obj.delta = stamp + obj.delta
     return true
@@ -104,7 +105,7 @@ function stampEvent(obj: any, seen: Set<string>): boolean {
     let changed = false
     for (const ch of obj.choices) {
       const c = ch?.delta?.content
-      if (typeof c !== "string" || c === "") continue
+      if (typeof c !== "string" || c.trim() === "") continue
       const key = `c${ch.index ?? 0}`
       if (seen.has(key)) continue
       seen.add(key)
