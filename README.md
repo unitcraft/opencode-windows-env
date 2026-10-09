@@ -19,7 +19,13 @@ calls that only ask the clock (`date "+%H:%M"`, `Get-Date -Format HH:mm`). The s
 adds is constant: a clock in the hint would change every minute and, sitting before the whole
 history, re-bill it on every request with Claude's prefix prompt cache.
 
-время в журнал ставит инструмент `progress_line` проекта CrewHarness; команды часов отклоняются
+Stamps never reach the model: before a request goes out, the plugin cuts the leading `HH:MM` stamps from the assistant
+messages of the history (Anthropic Messages, OpenAI Chat, OpenAI Responses; other roles and stamps inside a text are
+left alone). Weaker models used to copy the stamps and pile up `02:31 02:31 ...` with old times; the cut is
+deterministic, so the prefix cache is not broken. The stamp on the output is still put by the plugin.
+
+A task journal needs the real time too, and the clock commands are refused: the project's own tool `progress_line`
+(CrewHarness plugin) writes the time into `progress.log` itself.
 
 Tabs on the [`claude-code` provider](https://github.com/unitcraft/opencode-claude-code-provider) are not
 reached: Claude Code runs its own shell tools and model calls. There the provider stamps the time itself
