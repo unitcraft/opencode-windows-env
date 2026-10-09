@@ -19,7 +19,7 @@ calls that only ask the clock (`date "+%H:%M"`, `Get-Date -Format HH:mm`). The s
 adds is constant: a clock in the hint would change every minute and, sitting before the whole
 history, re-bill it on every request with Claude's prefix prompt cache.
 
-Progress log: a clock-only command is refused, so the plugin gives agents one narrow operation, the tool `progress_line` ({file, code, unit, text}): it appends ONE line `<code> k/N [HH:MM] <text>` with the machine time to a file named `progress.log` inside the project folder (the file must exist; the operating system's refusal is respected; nothing is rewritten).
+время в журнал ставит инструмент `progress_line` проекта CrewHarness; команды часов отклоняются
 
 Tabs on the [`claude-code` provider](https://github.com/unitcraft/opencode-claude-code-provider) are not
 reached: Claude Code runs its own shell tools and model calls. There the provider stamps the time itself

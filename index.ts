@@ -35,7 +35,7 @@
 // (`experimental.ws.*`) не переписывается — названная граница.
 
 import { execFileSync } from "node:child_process"
-import { appendFileSync, existsSync, statSync } from "node:fs"
+import { appendFileSync, existsSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 
@@ -181,49 +181,6 @@ export function stripStamps(body: string): string {
 }
 
 
-// ЗАПИСЬ ПРОГРЕССА (2026-10-09). Методика требует фактическое время в строках журнала прогресса (`<код> k/N [ЧЧ:ММ] <что делается>`), а
-// запрос времени командой запрещён выше (его ставит штамп, а не команда). Чтобы запрет не мешал журналу, у агента есть узкая
-// операция: она сама берёт время машины и дописывает ОДНУ строку в файл с именем progress.log внутри папки проекта окна.
-// Никакой оболочки и произвольных путей: имя файла, код сессии, счёт k/N и текст проверяются, права файла соблюдаются
-// (отказ файловой системы возвращается отказом, файл не меняется). Историческое время журналов не переписывается: операция только дописывает.
-export type ProgressInput = { file: string; code: string; unit: string; text: string }
-const CODE_RE = /^[A-Za-zА-Яа-яЁё0-9]{1,8}$/
-const UNIT_RE = /^(?:\d{1,4}\/\d{1,4}|\?\/\?)$/
-export function progressLine(
-  input: ProgressInput,
-  base: string,
-  now: Date = new Date(),
-): { ok: true; line: string; file: string } | { ok: false; reason: string } {
-  const text = String(input?.text ?? "").trim()
-  const code = String(input?.code ?? "").trim()
-  const unit = String(input?.unit ?? "").trim()
-  const file = String(input?.file ?? "").trim()
-  if (!CODE_RE.test(code)) return { ok: false, reason: "код сессии: 1–8 букв или цифр без пробелов (например С5д)" }
-  if (!UNIT_RE.test(unit)) return { ok: false, reason: "счёт: k/N числами (например 4/13) или ?/?" }
-  if (!text) return { ok: false, reason: "текст пустой" }
-  if (/[\r\n\u0000-\u001f\u007f]/.test(text)) return { ok: false, reason: "текст в одну строку, без управляющих символов" }
-  if ([...text].length > 120) return { ok: false, reason: "текст длиннее 120 знаков (строка журнала до 80 знаков по правилу проекта; сократи)" }
-  if (!file) return { ok: false, reason: "не назван файл progress.log" }
-  const abs = path.resolve(base, file)
-  if (path.basename(abs).toLowerCase() !== "progress.log") return { ok: false, reason: "писать можно только в файл с именем progress.log" }
-  const rel = path.relative(path.resolve(base), abs)
-  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) return { ok: false, reason: "файл вне папки проекта окна" }
-  let st
-  try {
-    st = statSync(abs)
-  } catch {
-    return { ok: false, reason: "файла нет: журнал создаёт сессия методики, эта операция только дописывает" }
-  }
-  if (!st.isFile()) return { ok: false, reason: "это не файл" }
-  const line = `${code} ${unit} [${hhmm(now)}] ${text}`
-  try {
-    appendFileSync(abs, line + "\n", "utf8")
-  } catch (e: any) {
-    return { ok: false, reason: `файловая система отказала: ${e?.code ?? e}` }
-  }
-  return { ok: true, line, file: abs }
-}
-
 // Экспорт — для самотеста `test/stamp.test.mjs`; OpenCode читает только default.
 export function stampStream(body: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
   const dec = new TextDecoder()
@@ -306,37 +263,6 @@ export default {
     })
 
 
-    // Операция записи прогресса (см. progressLine): единственный разрешённый способ поставить настоящее время в журнал прогресса.
-    try {
-      await ctx.tool.transform((editor: any) => {
-        editor.add({
-          name: "progress_line",
-          description:
-            "Append ONE line to a progress.log of the current project: '<code> <k/N> [HH:MM] <text>'. The plugin puts the machine time itself; do not ask the clock with date or Get-Date (refused). Only a file named progress.log inside the project folder, only appending; the file must exist. Example: file 'doc/tasks/007-x/progress.log', code 'С5д', unit '4/13', text 'ворота merge: замок только на проверенную вершину'.",
-          input: {
-            type: "object",
-            properties: {
-              file: { type: "string", description: "path to progress.log, relative to the project folder or absolute inside it" },
-              code: { type: "string", description: "session code, e.g. С5д" },
-              unit: { type: "string", description: "k/N as numbers, e.g. 4/13, or ?/?" },
-              text: { type: "string", description: "what is being done, one line, up to 120 characters" },
-            },
-            required: ["file", "code", "unit", "text"],
-          },
-          execute: async (input: any) => {
-            const r = progressLine(input, String(ctx?.location?.directory ?? process.cwd()))
-            if (!r.ok) {
-              log(`progress_line refused: ${r.reason}`)
-              return { content: `Не записано: ${r.reason}` }
-            }
-            return { content: `Записано: ${r.line}` }
-          },
-        })
-      })
-    } catch (e) {
-      log(`progress_line tool not registered: ${e}`)
-    }
-
     await ctx.permission.hook("evaluate", (ev: any) => {
       try {
         if (ev.effect === "deny" || ev.action !== "shell") return
@@ -345,8 +271,8 @@ export default {
         if (!isTimeOnlyCall(String(command))) return
         ev.effect = "deny"
         ev.message =
-          "nova-env: время не спрашивают командой — его ставит плагин в начало каждого твоего текстового сообщения " +
-          "Не пиши время сам."
+          "nova-env: время не спрашивают командой — время в журнал ставит инструмент progress_line проекта; " +
+          "для сообщения время ставит плагин сам, не пиши его."
         log(`deny time-only call: ${command}`)
       } catch (e) {
         log(`time deny failed: ${e}`)

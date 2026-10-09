@@ -12,6 +12,6 @@
     "url": "git+https://github.com/unitcraft/opencode-windows-env.git"
   },
   "scripts": {
-    "test": "node test/stamp.test.mjs && node test/progress-line.test.mjs"
+    "test": "node test/stamp.test.mjs"
   }
 }
